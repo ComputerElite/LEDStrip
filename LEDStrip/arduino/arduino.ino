@@ -119,13 +119,6 @@ void HandleSerialMsg(char data[]) {
       Serial.println(currentAnimation);
     }
   }
-  else if (strcmp(cmd, "sb") == 0) {
-    // Set brightness
-    if (arg1 != NULL) {
-      brightness = strtol(arg1, NULL, 10);
-      strip.setBrightness(brightness);
-    }
-  }
   else if (strcmp(cmd, "al") == 0) {
     // Set all LEDs
     if (arg1 != NULL) {
@@ -180,6 +173,14 @@ void HandleSerialMsg(char data[]) {
       shortDelay = strtol(arg1, NULL, 10);
       Serial.print("short delay set to: ");
       Serial.println(shortDelay);
+    }
+  }
+  else if (strcmp(cmd, "sb") == 0) {
+    // Set brightness
+    if (arg1 != NULL) {
+      brightness = strtol(arg1, NULL, 10);
+      strip.setBrightness(brightness);
+      strip.show();
     }
   } else if(strcmp(cmd, "info") == 0) {
     Serial.print("numleds,");

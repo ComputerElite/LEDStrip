@@ -29,7 +29,13 @@
     </label>
     <br>
     <label>
-        <input  onchange="if(liveUpdate) SetColor0()"  type="color" id="color0">
+        <input type="range" min="0" max="255" step="1" value="255" oninput="SetBrightness(value)" id="brightnessRange">
+        <input onchange="if(liveUpdate) SetBrightness(value)" type="number" placeholder="brightness" id="brightness">
+        <button onclick="SetBrightness()">Set brightness</button>
+    </label>
+    <br>
+    <label>
+        <input oninput="if(liveUpdate) SetColor0()" onchange="if(liveUpdate) SetColor0()"  type="color" id="color0">
         <button onclick="SetColor0()">Set color0</button>
     </label>
     <script>
@@ -38,6 +44,8 @@
         const color0 = document.getElementById("color0");
         const delay = document.getElementById("delay");
         const shortDelay = document.getElementById("shortDelay");
+        const brightness = document.getElementById("brightness");
+        const brightnessRange = document.getElementById("brightnessRange");
         var liveUpdate = true;
         
         
@@ -60,7 +68,20 @@
                 color0.value = json.color0;
                 delay.value = json.msDelay;
                 shortDelay.value = json.shortDelay;
+                brightness.value = json.brightness;
+                brightnessRange.value = json.brightness;
             })
+        
+        function SetBrightness(value = -1) {
+            if(value != -1) {
+                brightness.value = value;
+                brightnessRange.value = value;
+            }
+            fetch(`/api/setbrightness`, {
+                method: "POST",
+                body: brightness.value
+            });
+        }
         
         function SetColor0() {
             fetch(`/api/setcolor0`, {

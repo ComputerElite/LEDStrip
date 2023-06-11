@@ -7,6 +7,7 @@ public class LEDStrip
     public string portName = "";
     public int numLEDs { get; set; } = 0;
     public int currentStep  { get; set; }= 0;
+    public int brightness  { get; set; }= 0;
     public string currentAnimation { get; set; } = "";
     public int color0 { get; set; } = 0;
     public int msDelay { get; set; } = 0;
@@ -93,6 +94,9 @@ public class LEDStrip
             case "animation":
                 currentAnimation = args[1];
                 break;
+            case "brightness":
+                brightness = int.Parse(args[1]);
+                break;
         }
         if(MessageRecieved != null) MessageRecieved(msg);
     }
@@ -134,6 +138,17 @@ public class LEDStrip
         currentStep = steps;
         msgsToSend.Add("ss," + steps);
     }
+    
+    /// <summary>
+    /// Sets the brightness of the LED strip
+    /// </summary>
+    /// <param name="brightness">brightness 0 - 255</param>
+    public void SetBrightness(int brightness)
+    {
+        this.brightness = brightness;
+        msgsToSend.Add("sb," + brightness);
+    }
+    
     /// Sets the delay for animations such as blinking
     /// </summary>
     /// <param name="delayInMs">delay in ms</param>

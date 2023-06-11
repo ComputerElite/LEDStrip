@@ -48,6 +48,12 @@ public class WebServer
             request.SendString("Set step to " + request.bodyString);
             return true;
         });
+        server.AddRoute("POST", "/api/setbrightness", request =>
+        {
+            strip.SetBrightness(int.Parse(request.bodyString));
+            request.SendString("Set brightness to " + request.bodyString);
+            return true;
+        });
         server.AddRoute("POST", "/api/setcolor0", request =>
         {
             strip.SetColorVariable(0, Convert.ToInt32(request.bodyString.Replace("#", ""), 16));
