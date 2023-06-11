@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ComputerElite LED Strip</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <label>
+        <select onchange="if(liveUpdate) SetAnimation()" id="animations">
+    
+        </select>
+        <button onclick="SetAnimation()">Set animation</button>
+    </label>
+    <br>
+    <label>
+        <input onchange="if(liveUpdate) SetStep()"  type="number" placeholder="step" id="step">
+        <button onclick="SetStep()">Set step</button>
+    </label>
+    <br>
+    <label>
+        <input onchange="if(liveUpdate) SetDelay()"  type="number" placeholder="delay" id="delay">
+        <button onclick="SetDelay()">Set delay</button>
+    </label>
+    <br>
+    <label>
+        <input onchange="if(liveUpdate) SetShortDelay()" type="number" placeholder="short delay" id="shortDelay">
+        <button onclick="SetShortDelay()">Set short delay</button>
+    </label>
+    <br>
+    <label>
+        <input  onchange="if(liveUpdate) SetColor0()"  type="color" id="color0">
+        <button onclick="SetColor0()">Set color0</button>
+    </label>
+    <script>
+        const animationSelector = document.getElementById("animations");
+        const step = document.getElementById("step");
+        const color0 = document.getElementById("color0");
+        const delay = document.getElementById("delay");
+        const shortDelay = document.getElementById("shortDelay");
+        var liveUpdate = true;
+        
+        
+        fetch(`/api/animations`)
+            .then(response => response.json())
+            .then(json => {
+                for(const [key, value] of Object.entries(json)) {
+                    const option = document.createElement("option");
+                    option.value = key;
+                    option.innerText = value;
+                    animationSelector.appendChild(option);
+                }
+            })
+        
+        fetch(`/api/strip`)
+            .then(response => response.json())
+            .then(json => {
+                step.value = json.currentStep;
+                animationSelector.value = json.currentAnimation;
+                color0.value = json.color0;
+                delay.value = json.msDelay;
+                shortDelay.value = json.shortDelay;
+            })
+        
+        function SetColor0() {
+            fetch(`/api/setcolor0`, {
+                method: "POST",
+                body: color0.value
+            });
+        }
+        
+        function SetDelay() {
+            fetch(`/api/setdelay`, {
+                method: "POST",
+                body: delay.value
+            });
+        }
+        
+        function SetShortDelay() {
+            fetch(`/api/setshortdelay`, {
+                method: "POST",
+                body: shortDelay.value
+            });
+        }
+        
+        function SetStep() {
+            fetch(`/api/setstep`, {
+                method: "POST",
+                body: step.value
+            });
+        }
+        
+        function SetAnimation() {
+            const animation = animationSelector.value;
+            fetch(`/api/setanimation`, {
+                method: "POST",
+                body: animation
+            });
+        }
+    </script>
+</body>
+</html>

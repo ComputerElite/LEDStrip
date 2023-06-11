@@ -1,0 +1,6 @@
+{
+    "configuration": "cpu=atmega328old",
+    "board": "arduino:avr:nano",
+    "sketch": "led_strips.ino",
+    "port": "/dev/ttyUSB0"
+}

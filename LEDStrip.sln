@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LEDStrip", "LEDStrip\LEDStrip.csproj", "{9000DE01-DDD2-40F3-A46B-48EBC1DA1BEC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComputerUtils", "..\ComputerUtils\ComputerUtils\ComputerUtils.csproj", "{9F0D4C78-5995-4BF6-A78C-DF22AB9C9026}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9000DE01-DDD2-40F3-A46B-48EBC1DA1BEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9000DE01-DDD2-40F3-A46B-48EBC1DA1BEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9000DE01-DDD2-40F3-A46B-48EBC1DA1BEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9000DE01-DDD2-40F3-A46B-48EBC1DA1BEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F0D4C78-5995-4BF6-A78C-DF22AB9C9026}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F0D4C78-5995-4BF6-A78C-DF22AB9C9026}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F0D4C78-5995-4BF6-A78C-DF22AB9C9026}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F0D4C78-5995-4BF6-A78C-DF22AB9C9026}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
