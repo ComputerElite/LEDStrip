@@ -229,13 +229,16 @@ void Static() {
   strip.show();
 }
 
+u32 lastBlink = 0;
 void Blink() {
-  blinkOn = !blinkOn;
-  for(int i=0; i<strip.numPixels(); i++) { 
-    strip.setPixelColor(i, blinkOn ? color0 : 0x000000);
+  if(millis() - lastBlink > msDelay) {
+    lastBlink = millis();
+    blinkOn = !blinkOn;
+    for(int i=0; i<strip.numPixels(); i++) { 
+      strip.setPixelColor(i, blinkOn ? color0 : 0x000000);
+    }
+    strip.show();
   }
-  strip.show();
-  delay(msDelay);
 }
 
 void ResetVars() {
@@ -259,34 +262,57 @@ void RainbowFade() {
   strip.show();
 }
 
+bool goingRight = true;
+u32 lastColorUpdate = 0;
+int lastIndex = 0;
 void RainbowLeftRight() {
-  for(int i = 0; i < strip.numPixels(); i++) {
-    hue += step;
-    strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
-    strip.show();
-    delay(shortDelay);
-  }
-  for(int i = strip.numPixels(); i >= 0; i--) {
-    hue += step;
-    strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
-    strip.show();
-    delay(shortDelay);
+  if(millis() - lastColorUpdate > shortDelay) {
+    lastColorUpdate = millis();
+    if(goingRight) {
+      hue += step;
+      strip.setPixelColor(lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+      strip.show();
+      lastIndex++;
+      if(lastIndex >= strip.numPixels()) {
+        goingRight = false;
+        lastIndex = strip.numPixels();
+      }
+    } else if(lastIndex >= 0) {
+      hue += step;
+      strip.setPixelColor(lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+      strip.show();
+      lastIndex--;
+      if(lastIndex < 0) {
+        goingRight = true;
+        lastIndex = 0;
+      }
+    }
   }
 }
 
 void RainbowLeftRightMiddle() {
-  for(int i = 0; i < strip.numPixels() / 2; i++) {
-    hue += step;
-    strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
-    strip.setPixelColor(strip.numPixels() - i, strip.gamma32(strip.ColorHSV(hue)));
-    strip.show();
-    delay(shortDelay);
-  }
-  for(int i = strip.numPixels() / 2; i >= 0; i--) {
-    hue += step;
-    strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
-    strip.setPixelColor(strip.numPixels() - i, strip.gamma32(strip.ColorHSV(hue)));
-    strip.show();
-    delay(shortDelay);
+  if(millis() - lastColorUpdate > shortDelay) {
+    lastColorUpdate = millis();
+    if(goingRight && lastIndex < strip.numPixels() / 2) {
+      hue += step;
+      strip.setPixelColor(lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+    strip.setPixelColor(strip.numPixels() - lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+      strip.show();
+      lastIndex++;
+      if(lastIndex >= strip.numPixels() / 2) {
+        goingRight = false;
+        lastIndex = strip.numPixels() / 2;
+      }
+    } else if(lastIndex >= 0) {
+      hue += step;
+      strip.setPixelColor(lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+    strip.setPixelColor(strip.numPixels() - lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+      strip.show();
+      lastIndex--;
+      if(lastIndex < 0) {
+        goingRight = true;
+        lastIndex = 0;
+      }
+    }
   }
 }
