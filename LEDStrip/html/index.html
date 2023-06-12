@@ -132,7 +132,7 @@
                 UpdateAnimations();
                 ChangeAnimation(currentAnimation);
                 var hsv = RGBtoHSV(json.color0);
-                new ReinventedColorWheel({
+                picker = new ReinventedColorWheel({
                     appendTo: document.getElementById('color0'),
                     wheelDiameter: 500,
                     wheelThickness: 80,
