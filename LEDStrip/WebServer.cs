@@ -15,8 +15,6 @@ public class WebServer
         server.DefaultCacheValidityInSeconds = 0;
         server.AddRouteFile("/", html + "index.html", false, true, false);
         server.AddRouteFile("/style.css", html + "style.css", false, true, false);
-        server.AddRouteFile("/color-picker.css", html + "color-picker.css", false, true, false);
-        server.AddRouteFile("/color-picker.js", html + "color-picker.js", false, true, false);
         server.AddRoute("GET", "/api/animations", request =>
         {
             request.SendString(JsonSerializer.Serialize(Animation.GetAnimations()), "application/json");
