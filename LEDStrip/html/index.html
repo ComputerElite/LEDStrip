@@ -40,7 +40,7 @@
         </div>
         <div class="optionContainer optionContainerVisible">
             <div class="optionLabel">Brightness</div>
-            <input class="option" type="range" min="0" max="255" step="1" value="255" oninput="SetBrightness(value)" id="brightnessRange">
+            <input type="range" min="0" max="255" step="1" value="255" oninput="SetBrightness(value)" id="brightnessRange">
         </div>
         <div id="color0" style="width: 100vw" class="option">
 
@@ -60,32 +60,37 @@
         var currentAnimation = "";
         var picker;
         var optionsList = {
-            blk: {
+            5: {
                 step: false,
                 delay: true,
                 shortDelay: false
             },
-            rbf: {
+            3: {
                 step: true,
                 delay: false,
                 shortDelay: false
             },
-            rbs: {
+            4: {
                 step: true,
                 delay: false,
                 shortDelay: false
             },
-            rlb: {
+            1: {
                 step: true,
                 delay: false,
                 shortDelay: true
             },
-            rlbm: {
+            0: {
                 step: true,
                 delay: false,
                 shortDelay: true
             },
-            static: {
+            2: {
+                step: true,
+                delay: false,
+                shortDelay: true
+            },
+            6: {
                 step: false,
                 delay: false,
                 shortDelay: false

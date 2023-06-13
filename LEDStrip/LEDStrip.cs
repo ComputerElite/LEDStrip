@@ -8,7 +8,7 @@ public class LEDStrip
     public int numLEDs { get; set; } = 0;
     public int currentStep  { get; set; }= 0;
     public int brightness  { get; set; }= 0;
-    public string currentAnimation { get; set; } = "";
+    public int currentAnimation { get; set; } = 0;
     public int color0 { get; set; } = 0;
     public int msDelay { get; set; } = 0;
     public int shortDelay { get; set; } = 0;
@@ -92,7 +92,7 @@ public class LEDStrip
                 shortDelay = int.Parse(args[1]);
                 break;
             case "animation":
-                currentAnimation = args[1];
+                currentAnimation = int.Parse(args[1]);
                 break;
             case "brightness":
                 brightness = int.Parse(args[1]);
@@ -123,7 +123,7 @@ public class LEDStrip
     /// Sets one of the predefined animations of the LED strip
     /// </summary>
     /// <param name="a">Animation name</param>
-    public void SetAnimation(string a)
+    public void SetAnimation(int a)
     {
         currentAnimation = a;
         msgsToSend.Add("sa," + a);

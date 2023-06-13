@@ -12,6 +12,9 @@
 #include <Adafruit_NeoPixel.h>
 
 #define PIN 5
+#define PIN_BUTTON0 4
+#define PIN_BUTTON1 3
+#define PIN_BUTTON2 2
 #define N_LEDS 30
 const int MAX_MESSAGE_LENGTH = 64;
 
@@ -19,6 +22,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   strip.begin();
+  pinMode(PIN_BUTTON0, INPUT);
+  pinMode(PIN_BUTTON1, INPUT);
+  pinMode(PIN_BUTTON2, INPUT);
   Serial.begin(9600);
 }
 char message[MAX_MESSAGE_LENGTH];
@@ -27,15 +33,70 @@ unsigned int messagePos = 0;
 long hue = 0; // hue
 long msDelay = 200;
 long shortDelay = 40;
-long step = 32;
+long step = 128;
 int brightness = 255;
-char currentAnimation[16] = "rbf";
+int currentAnimation = 3;
 long color0 = 0;
+
+bool lastButton0Pressed = true;
+bool lastButton1Pressed = true;
+bool lastButton2Pressed = true;
+long button0PressTime = 0;
+long button1PressTime = 0;
+long button2PressTime = 0;
+long button0ReleaseTime = 0;
+long button1ReleaseTime = 0;
+long button2ReleaseTime = 0;
 
 void loop() {
   // Read from serial
   ReadFromSerial();
   DoAnimation();
+
+  // Button 0
+  bool button0Pressed = digitalRead(PIN_BUTTON0) == LOW;
+  if(button0Pressed != lastButton0Pressed && button0Pressed) {
+    button0ReleaseTime = millis();
+    Serial.println("Button0 released");
+    NextPattern();
+    if(button0PressTime - millis() > 1000) {
+      // turn strip on/off
+      if(brightness > 0) brightness = 0;
+      else brightness = 256;
+      strip.setBrightness(brightness);
+    }
+  }
+  if(button0Pressed != lastButton0Pressed && !button0Pressed) {
+    button0PressTime = millis();
+    Serial.println("Button0 pressed");
+  }
+  lastButton0Pressed = button0Pressed;
+
+  // Button 1
+  bool button1Pressed = digitalRead(PIN_BUTTON1) == LOW;
+  if(button1Pressed != lastButton1Pressed && button1Pressed) {
+    button1ReleaseTime = millis();
+    Serial.println("Button1 released");
+    hue += 2048;
+    color0 = strip.gamma32(strip.ColorHSV(hue));
+  }
+  if(button1Pressed != lastButton1Pressed && !button1Pressed) {
+    button1PressTime = millis();
+    Serial.println("Button1 pressed");
+  }
+  lastButton1Pressed = button1Pressed;
+
+  // Button 2
+  bool button2Pressed = digitalRead(PIN_BUTTON2) == LOW;
+  if(button2Pressed != lastButton2Pressed && button2Pressed) {
+    button2ReleaseTime = millis();
+    Serial.println("Button2 released");
+  }
+  if(button2Pressed != lastButton2Pressed && !button2Pressed) {
+    button2PressTime = millis();
+    Serial.println("Button2 pressed");
+  }
+  lastButton2Pressed = button2Pressed;
 }
 
 // Call this function whenever we can read from the serial buffer
@@ -52,19 +113,10 @@ void ReadFromSerial() {
     } else {
       // Message done, handle
       message[messagePos] = '\0';
-      /*
-      Serial.print("msg: ");
-      Serial.println(message);
-      */
       HandleSerialMsg(message);
       messagePos = 0;
     }
   }
-}
-
-void SetAnimation(char anim[]) {
-  strncpy(currentAnimation, anim, sizeof(currentAnimation) - 1);
-  currentAnimation[sizeof(currentAnimation) - 1] = '\0';
 }
 
 void HandleSerialMsg(char data[]) {
@@ -94,7 +146,7 @@ void HandleSerialMsg(char data[]) {
   if (strcmp(cmd, "l") == 0) {
     // Set LED
     if (arg1 != NULL && arg2 != NULL) {
-      SetAnimation("none");
+      currentAnimation = -1;
       long ledIndex = arg1[0];
       long color = arg2[0] * 0xFFFF + arg2[1] * 0xFF + arg2[2];
       strip.setPixelColor(ledIndex, strip.gamma32(color));
@@ -113,8 +165,7 @@ void HandleSerialMsg(char data[]) {
   else if (strcmp(cmd, "sa") == 0) {
     // Set animation
     if (arg1 != NULL) {
-      strncpy(currentAnimation, arg1, sizeof(currentAnimation) - 1);
-      currentAnimation[sizeof(currentAnimation) - 1] = '\0';
+      currentAnimation = strtol(arg1, NULL, 10);
       Serial.print("Setting animation to: ");
       Serial.println(currentAnimation);
     }
@@ -122,7 +173,7 @@ void HandleSerialMsg(char data[]) {
   else if (strcmp(cmd, "al") == 0) {
     // Set all LEDs
     if (arg1 != NULL) {
-      SetAnimation("static");
+      currentAnimation = 6; // static
       color0 = strtol(arg1, NULL, 16);
     }
   }
@@ -130,17 +181,6 @@ void HandleSerialMsg(char data[]) {
   else if (strcmp(cmd, "debug") == 0) {
     Serial.print("Current animation: ");
     Serial.print(currentAnimation);
-    Serial.print(" (length: ");
-    Serial.print(sizeof(currentAnimation));
-    Serial.println(")");
-    
-    Serial.print("Comparison result: ");
-    Serial.println(strcmp(currentAnimation, "rbf"));
-
-    Serial.print("Current animation (debug): ");
-    for (int i = 0; i < strlen(currentAnimation); i++) {
-      Serial.print(currentAnimation[i]);
-    }
     Serial.println();
     
     Serial.print("hue: ");
@@ -202,21 +242,32 @@ void HandleSerialMsg(char data[]) {
   }
 }
 
+int numAnimations = 9;
+
+void NextPattern() {
+  currentAnimation++;
+  currentAnimation %= numAnimations;
+}
+
 void DoAnimation() {
-  if(strcmp(currentAnimation, "rlbm") == 0) {
-    RainbowLeftRightMiddle();
-  } else if(strcmp(currentAnimation, "rlb") == 0) {
+  if(currentAnimation == 0) {
+    RainbowLeftRightBounceMiddle();
+  } else if(currentAnimation == 1) {
+    RainbowLeftRightBounce();
+  } else if(currentAnimation == 2) {
     RainbowLeftRight();
-  } else if(strcmp(currentAnimation, "rbf") == 0) {
+  } else if(currentAnimation == 3) {
     RainbowFade();
-  } else if(strcmp(currentAnimation, "rbs") == 0) {
+  } else if(currentAnimation == 4) {
     RainbowStatic();
-  } else if(strcmp(currentAnimation, "blk") == 0) {
+  } else if(currentAnimation == 5) {
     Blink();
-  } else if(strcmp(currentAnimation, "static") == 0) {
+  } else if(currentAnimation == 6) {
     Static();
-  } else if(strcmp(currentAnimation, "static") == 0) {
-    Static();
+  } else if(currentAnimation == 7) {
+    LeftTurnSignal();
+  } else if(currentAnimation == 8) {
+    RightTurnSignal();
   }
 }
 
@@ -241,6 +292,36 @@ void Blink() {
   }
 }
 
+void LeftTurnSignal() {
+  if(millis() - lastBlink > msDelay) {
+    lastBlink = millis();
+    blinkOn = !blinkOn;
+    for(int i=0; i<strip.numPixels(); i++) { 
+      if(i < 10) {
+        strip.setPixelColor(i, blinkOn ? 0xFFFF00 : 0x000000);
+      } else {
+        strip.setPixelColor(i, 0x000000);
+      }
+    }
+    strip.show();
+  }
+}
+
+void RightTurnSignal() {
+  if(millis() - lastBlink > msDelay) {
+    lastBlink = millis();
+    blinkOn = !blinkOn;
+    for(int i=0; i<strip.numPixels(); i++) { 
+      if(i > 20) {
+        strip.setPixelColor(i, blinkOn ? 0xFFFF00 : 0x000000);
+      } else {
+        strip.setPixelColor(i, 0x000000);
+      }
+    }
+    strip.show();
+  }
+}
+
 void ResetVars() {
 
 }
@@ -249,7 +330,7 @@ void RainbowStatic() {
   for(int i=0; i<strip.numPixels(); i++) { 
     strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
   }
-  hue += step;
+  hue += step / 4;
   strip.show();
 }
 
@@ -258,7 +339,7 @@ void RainbowFade() {
     int pixelHue = hue + (i * 65536L / strip.numPixels());
     strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
   }
-  hue += step;
+  hue += step / 4;
   strip.show();
 }
 
@@ -266,6 +347,20 @@ bool goingRight = true;
 u32 lastColorUpdate = 0;
 int lastIndex = 0;
 void RainbowLeftRight() {
+  if(lastIndex >= strip.numPixels() || lastIndex < 0) lastIndex = 0;
+  if(millis() - lastColorUpdate > shortDelay) {
+    lastColorUpdate = millis();
+    hue += step;
+    strip.setPixelColor(lastIndex, strip.gamma32(strip.ColorHSV(hue)));
+    strip.show();
+    lastIndex++;
+    if(lastIndex >= strip.numPixels()) {
+      lastIndex = 0;
+    }
+  }
+}
+
+void RainbowLeftRightBounce() {
   if(millis() - lastColorUpdate > shortDelay) {
     lastColorUpdate = millis();
     if(goingRight) {
@@ -290,7 +385,7 @@ void RainbowLeftRight() {
   }
 }
 
-void RainbowLeftRightMiddle() {
+void RainbowLeftRightBounceMiddle() {
   if(millis() - lastColorUpdate > shortDelay) {
     lastColorUpdate = millis();
     if(goingRight && lastIndex < strip.numPixels() / 2) {

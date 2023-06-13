@@ -22,7 +22,7 @@ public class WebServer
         });
         server.AddRoute("POST", "/api/setanimation", request =>
         {
-            strip.SetAnimation(request.bodyString);
+            strip.SetAnimation(int.Parse(request.bodyString));
             request.SendString("Set animation to " + request.bodyString);
             return true;
         });

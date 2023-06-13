@@ -2,26 +2,29 @@ namespace LEDStrip;
 
 public class Animation
 {
-    public static string RainbowStatic = "rbs";
-    public static string RainbowFade = "rbf";
-    public static string RainbowLeftRightBounceInMiddle = "rlbm";
-    public static string RainbowLeftRightBounce = "rlb";
-    public static string Blink = "blk";
-    public static string Static = "static";
+    public static int RainbowStatic = 4;
+    public static int RainbowFade = 3;
+    public static int RainbowLeftRightBounceMiddle = 0;
+    public static int RainbowLeftRightBounce = 1;
+    public static int RainbowLeftRight = 2;
+    public static int Blink = 5;
+    public static int Static = 6;
+    public static int LeftTurnSignal = 7;
+    public static int RightTurnSignal = 8;
 
-    public static Dictionary<string, string> GetAnimations()
+    public static Dictionary<int, string> GetAnimations()
     {
-        Dictionary<string, string> animationDictionary = new Dictionary<string, string>();
+        Dictionary<int, string> animationDictionary = new Dictionary<int, string>();
 
         // Get all public static fields of the Animation class
         var fields = typeof(Animation).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
         foreach (var field in fields)
         {
-            if (field.FieldType == typeof(string))
+            if (field.FieldType == typeof(int))
             {
                 string fieldName = field.Name;
-                string fieldValue = (string)field.GetValue(null); // null argument for static fields
+                int fieldValue = (int)field.GetValue(null); // null argument for static fields
 
                 animationDictionary.Add(fieldValue, fieldName);
             }
