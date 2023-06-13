@@ -36,7 +36,7 @@ long shortDelay = 40;
 long step = 128;
 int brightness = 255;
 int currentAnimation = 3;
-long color0 = 0;
+long color0 = 0xFFFFFF;
 
 bool lastButton0Pressed = true;
 bool lastButton1Pressed = true;
@@ -48,55 +48,117 @@ long button0ReleaseTime = 0;
 long button1ReleaseTime = 0;
 long button2ReleaseTime = 0;
 
+bool lastBrightnessDirectionWasUp = false;
+bool lastColorDirectionWasUp = false;
+
+long lastBrightnessChange = 0;
+long lastLoop = 0;
+int brightnessDirection = -1;
+int colorDirection = 1;
+
 void loop() {
   // Read from serial
   ReadFromSerial();
   DoAnimation();
 
   // Button 0
-  bool button0Pressed = digitalRead(PIN_BUTTON0) == LOW;
-  if(button0Pressed != lastButton0Pressed && button0Pressed) {
+  // Press: Next Animation or turn LED Strip on if off
+  // Hold >1s: Turn off/on LED strip
+  bool button0Pressed = digitalRead(PIN_BUTTON0) == HIGH;
+  if(button0Pressed != lastButton0Pressed && !button0Pressed) {
     button0ReleaseTime = millis();
     Serial.println("Button0 released");
-    NextPattern();
-    if(button0PressTime - millis() > 1000) {
+    if(millis() - button0PressTime > 1000 || brightness == 0) {
       // turn strip on/off
-      if(brightness > 0) brightness = 0;
-      else brightness = 256;
-      strip.setBrightness(brightness);
+      if(brightness > 0) SetBrightness(0);
+      else SetBrightness(255);
+    } else {
+      // Display next Animation
+      NextAnimation();
     }
   }
-  if(button0Pressed != lastButton0Pressed && !button0Pressed) {
+  if(button0Pressed != lastButton0Pressed && button0Pressed) {
     button0PressTime = millis();
     Serial.println("Button0 pressed");
   }
   lastButton0Pressed = button0Pressed;
 
   // Button 1
-  bool button1Pressed = digitalRead(PIN_BUTTON1) == LOW;
-  if(button1Pressed != lastButton1Pressed && button1Pressed) {
+  // Hold: change color0 up
+  // Hold after double tab: change color0 down
+  bool button1Pressed = digitalRead(PIN_BUTTON1) == HIGH;
+  if(button1Pressed != lastButton1Pressed && !button1Pressed) {
     button1ReleaseTime = millis();
     Serial.println("Button1 released");
-    hue += 2048;
+  }
+  if(button1Pressed) {
+    hue += (millis() - lastLoop) * 10 * colorDirection;
     color0 = strip.gamma32(strip.ColorHSV(hue));
   }
-  if(button1Pressed != lastButton1Pressed && !button1Pressed) {
+  if(button1Pressed != lastButton1Pressed && button1Pressed) {
     button1PressTime = millis();
     Serial.println("Button1 pressed");
+
+    if(lastColorDirectionWasUp) button1ReleaseTime = 0;
+    if(button1PressTime - button1ReleaseTime < 150) {
+      // Set brightness to be changed up
+      colorDirection = -1;
+      lastColorDirectionWasUp = true;
+    } else {
+      // Set brightness to be changed down
+      colorDirection = 1;
+      lastColorDirectionWasUp = false;
+    }
   }
   lastButton1Pressed = button1Pressed;
 
+
+
   // Button 2
-  bool button2Pressed = digitalRead(PIN_BUTTON2) == LOW;
-  if(button2Pressed != lastButton2Pressed && button2Pressed) {
+  // Hold: Change brightness down
+  // Double tap then hold: Change brightness up
+  bool button2Pressed = digitalRead(PIN_BUTTON2) == HIGH;
+  if(button2Pressed != lastButton2Pressed && !button2Pressed) {
     button2ReleaseTime = millis();
     Serial.println("Button2 released");
   }
-  if(button2Pressed != lastButton2Pressed && !button2Pressed) {
+  // While pressed do every 50 ms
+  if(button2Pressed && millis() - lastBrightnessChange > 50) {
+    Serial.println(brightnessDirection);
+    SetBrightness(brightness + brightnessDirection);
+    lastBrightnessChange = millis();
+  }
+
+  // When button is pressed down
+  if(button2Pressed != lastButton2Pressed && button2Pressed) {
     button2PressTime = millis();
     Serial.println("Button2 pressed");
+
+    // For double tab reset double tab counter after double tab has been registered
+    if(lastBrightnessDirectionWasUp) button2ReleaseTime = 0;
+    if(button2PressTime - button2ReleaseTime < 150) {
+      // Set brightness to be changed up
+      brightnessDirection = 1;
+      lastBrightnessDirectionWasUp = true;
+    } else {
+      // Set brightness to be changed down
+      brightnessDirection = -4;
+      lastBrightnessDirectionWasUp = false;
+    }
   }
   lastButton2Pressed = button2Pressed;
+
+
+  lastLoop = millis();
+}
+
+void SetBrightness(int b) {
+  Serial.println(b);
+  if(b < 0) b = 0;
+  if(b > 255) b = 255;
+  brightness = b;
+  strip.setBrightness(brightness);
+  strip.show();
 }
 
 // Call this function whenever we can read from the serial buffer
@@ -218,8 +280,7 @@ void HandleSerialMsg(char data[]) {
   else if (strcmp(cmd, "sb") == 0) {
     // Set brightness
     if (arg1 != NULL) {
-      brightness = strtol(arg1, NULL, 10);
-      strip.setBrightness(brightness);
+      SetBrightness(strtol(arg1, NULL, 10));
       strip.show();
     }
   } else if(strcmp(cmd, "info") == 0) {
@@ -244,7 +305,7 @@ void HandleSerialMsg(char data[]) {
 
 int numAnimations = 9;
 
-void NextPattern() {
+void NextAnimation() {
   currentAnimation++;
   currentAnimation %= numAnimations;
 }
