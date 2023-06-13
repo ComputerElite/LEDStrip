@@ -34,7 +34,7 @@ long hue = 0; // hue
 long msDelay = 200;
 long shortDelay = 40;
 long step = 128;
-int brightness = 255;
+double brightness = 255;
 int currentAnimation = 3;
 long color0 = 0xFFFFFF;
 
@@ -53,8 +53,10 @@ bool lastColorDirectionWasUp = false;
 
 long lastBrightnessChange = 0;
 long lastLoop = 0;
-int brightnessDirection = -1;
+double brightnessDirection = -1;
 int colorDirection = 1;
+bool stripOn = true;
+int savedBrightness = 0;
 
 void loop() {
   // Read from serial
@@ -70,8 +72,14 @@ void loop() {
     Serial.println("Button0 released");
     if(millis() - button0PressTime > 1000 || brightness == 0) {
       // turn strip on/off
-      if(brightness > 0) SetBrightness(0);
-      else SetBrightness(255);
+      stripOn = !stripOn;
+      if(!stripOn) {
+        // Save brightness for turning on again
+        savedBrightness = brightness;
+        SetBrightness(0);
+      } else {
+        SetBrightness(savedBrightness);
+      }
     } else {
       // Display next Animation
       NextAnimation();
@@ -123,8 +131,7 @@ void loop() {
     Serial.println("Button2 released");
   }
   // While pressed do every 50 ms
-  if(button2Pressed && millis() - lastBrightnessChange > 50) {
-    Serial.println(brightnessDirection);
+  if(button2Pressed && millis() - lastBrightnessChange > 10) {
     SetBrightness(brightness + brightnessDirection);
     lastBrightnessChange = millis();
   }
@@ -138,11 +145,11 @@ void loop() {
     if(lastBrightnessDirectionWasUp) button2ReleaseTime = 0;
     if(button2PressTime - button2ReleaseTime < 150) {
       // Set brightness to be changed up
-      brightnessDirection = 1;
+      brightnessDirection = .3;
       lastBrightnessDirectionWasUp = true;
     } else {
       // Set brightness to be changed down
-      brightnessDirection = -4;
+      brightnessDirection = -.8;
       lastBrightnessDirectionWasUp = false;
     }
   }
@@ -152,12 +159,11 @@ void loop() {
   lastLoop = millis();
 }
 
-void SetBrightness(int b) {
-  Serial.println(b);
+void SetBrightness(double b) {
   if(b < 0) b = 0;
   if(b > 255) b = 255;
   brightness = b;
-  strip.setBrightness(brightness);
+  strip.setBrightness((int)round(brightness));
   strip.show();
 }
 
@@ -299,7 +305,7 @@ void HandleSerialMsg(char data[]) {
     Serial.print("animation,");
     Serial.println(currentAnimation);
     Serial.print("brightness,");
-    Serial.println(brightness);
+    Serial.println((int)round(brightness));
   }
 }
 

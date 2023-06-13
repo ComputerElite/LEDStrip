@@ -135,7 +135,7 @@
                 }
                 step.value = json.currentStep;
                 UpdateAnimations();
-                ChangeAnimation(currentAnimation);
+                ChangeAnimation(currentAnimation, false);
                 var hsv = RGBtoHSV(json.color0);
                 picker = new ReinventedColorWheel({
                     appendTo: document.getElementById('color0'),
@@ -145,7 +145,7 @@
                     onChange: SetColor0,
                     hsv: [hsv.h, hsv.s, hsv.v]
                 })
-                SetColor0(picker)
+                SetColor0(picker, false)
             })
         
         function SetBrightness(value = -1) {
@@ -156,15 +156,17 @@
             });
         }
         
-        function SetColor0(color) {
+        function SetColor0(color, update = true) {
             console.log(color);
             console.log(HSVtoRGB(color.hsv[0], color.hsv[1], color.hsv[2]));
             var c = HSVtoRGB(color.hsv[0], color.hsv[1], color.hsv[2]);
             var hex = ((c.r << 16) + (c.g << 8) + c.b).toString(16)
-            fetch(`/api/setcolor0`, {
-                method: "POST",
-                body: hex
-            });
+            if(update) {
+                fetch(`/api/setcolor0`, {
+                    method: "POST",
+                    body: hex
+                });
+            }
         }
         
         function SetDelay() {
@@ -188,7 +190,7 @@
             });
         }
         
-        function ChangeAnimation(animation) {
+        function ChangeAnimation(animation, update = true) {
             currentAnimation = animation;
             if(optionsList[currentAnimation]) {
                 for(const [key, value] of Object.entries(optionsList[currentAnimation])) {
@@ -200,10 +202,12 @@
                 }
             }
             UpdateAnimations();
-            fetch(`/api/setanimation`, {
-                method: "POST",
-                body: animation
-            });
+            if(update) {
+                fetch(`/api/setanimation`, {
+                    method: "POST",
+                    body: animation
+                });
+            }
         }
 
         function RGBtoHSV(rgb) {

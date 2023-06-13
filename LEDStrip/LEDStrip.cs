@@ -195,6 +195,7 @@ public class LEDStrip
     
     
     private string currentMsg = "";
+    DateTime lastInfoRequested = DateTime.Now;
     
     /// <summary>
     /// Starts a thread that handles the serial connection
@@ -206,6 +207,12 @@ public class LEDStrip
         {
             while (port.IsOpen)
             {
+                // Update strip info every 2 seconds
+                if(DateTime.Now - lastInfoRequested > TimeSpan.FromSeconds(2))
+                {
+                    UpdateStripInfo();
+                    lastInfoRequested = DateTime.Now;
+                }
                 while (msgsToSend.Count > 0)
                 {
                     if (logSerial) Console.WriteLine("<< " + msgsToSend[0]);
@@ -220,7 +227,6 @@ public class LEDStrip
         connectionThread.Start();
         // Wait 2 seconds for initialization
         Thread.Sleep(2000);
-        UpdateStripInfo();
     }
 
     public void ReadAllFromSerial()
