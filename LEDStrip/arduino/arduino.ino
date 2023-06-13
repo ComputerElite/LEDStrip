@@ -30,10 +30,10 @@ void setup() {
 char message[MAX_MESSAGE_LENGTH];
 unsigned int messagePos = 0;
 
-long hue = 0; // hue
+uint16_t hue = 0; // hue
 long msDelay = 200;
 long shortDelay = 40;
-long step = 128;
+double step = 128;
 double brightness = 255;
 int currentAnimation = 3;
 long color0 = 0xFFFFFF;
@@ -54,7 +54,7 @@ bool lastColorDirectionWasUp = false;
 long lastBrightnessChange = 0;
 long lastLoop = 0;
 double brightnessDirection = -1;
-int colorDirection = 1;
+double colorDirection = 1;
 bool stripOn = true;
 int savedBrightness = 0;
 
@@ -100,8 +100,15 @@ void loop() {
     Serial.println("Button1 released");
   }
   if(button1Pressed) {
-    hue += (millis() - lastLoop) * 10 * colorDirection;
-    color0 = strip.gamma32(strip.ColorHSV(hue));
+    if(UseStepInsteadOfColor0()) {
+      // On some animations color can't be controlled. In that case adjust step
+      Serial.println("step");
+      step += (millis() - lastLoop) * colorDirection;
+    } else {
+      Serial.println("hue");
+      hue += (millis() - lastLoop) * 10 * colorDirection;
+      color0 = strip.gamma32(strip.ColorHSV(hue));
+    }
   }
   if(button1Pressed != lastButton1Pressed && button1Pressed) {
     button1PressTime = millis();
@@ -258,7 +265,7 @@ void HandleSerialMsg(char data[]) {
     Serial.println(color0);
     
     Serial.print("Step: ");
-    Serial.println(step);
+    Serial.println((int)round(step));
   }
   
   else if (strcmp(cmd, "ss") == 0) {
@@ -294,7 +301,7 @@ void HandleSerialMsg(char data[]) {
     Serial.println(N_LEDS);
 
     Serial.print("step,");
-    Serial.println(step);
+    Serial.println((int)round(step));
 
     Serial.print("color0,");
     Serial.println(color0);
@@ -312,8 +319,17 @@ void HandleSerialMsg(char data[]) {
 int numAnimations = 9;
 
 void NextAnimation() {
+  if(millis() < 1000) return;
   currentAnimation++;
   currentAnimation %= numAnimations;
+}
+
+int useStepInsteadOfColor0[] = {0, 1, 2, 3, 4};
+bool UseStepInsteadOfColor0() {
+  for(int i: useStepInsteadOfColor0) {
+    if(i == currentAnimation) return true;
+  }
+  return false;
 }
 
 void DoAnimation() {
