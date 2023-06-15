@@ -16,6 +16,12 @@
 #define PIN_BUTTON1 3
 #define PIN_BUTTON2 2
 #define N_LEDS 30
+#define ANIMATION_RAINBOW_FADE 3
+#define ANIMATION_SET_ALARM_HOUR 100
+#define ANIMATION_SET_ALARM_QUARTER_HOUR 101
+#define ANIMATION_SET_ALARM_COLOR 102
+#define ANIMATION_ALARM 103
+
 const int MAX_MESSAGE_LENGTH = 64;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_LEDS, PIN, NEO_GRB + NEO_KHZ800);
@@ -48,6 +54,15 @@ long button0ReleaseTime = 0;
 long button1ReleaseTime = 0;
 long button2ReleaseTime = 0;
 
+long alarmHour = 8;
+long alarmQuarterHour = 0;
+long alarmTime = 0;
+long alarmSetTime = 0;
+double alarmLength = 1000.0 * 10.0 * 60.0; // 10 minutes
+long alarmType = 0;
+long alarmShowRemainingPressTime = 0;
+
+bool button0DidSomething = false;
 bool lastBrightnessDirectionWasUp = false;
 bool lastColorDirectionWasUp = false;
 
@@ -57,6 +72,8 @@ double brightnessDirection = -1;
 double colorDirection = 1;
 bool stripOn = true;
 int savedBrightness = 0;
+
+bool blockNextButton0Release = false;
 
 void loop() {
   // Read from serial
@@ -69,8 +86,31 @@ void loop() {
   bool button0Pressed = digitalRead(PIN_BUTTON0) == HIGH;
   if(button0Pressed != lastButton0Pressed && !button0Pressed) {
     button0ReleaseTime = millis();
-    Serial.println("Button0 released");
-    if(millis() - button0PressTime > 1000 || brightness == 0) {
+    if(blockNextButton0Release) {
+      blockNextButton0Release = false;
+    } else {
+      // Button 0 released
+      if(SettingAlarm()) {
+        currentAnimation++;
+        if(currentAnimation == ANIMATION_ALARM) {
+          alarmSetTime = millis();
+          savedBrightness = brightness;
+          alarmTime = millis() + alarmHour * 1000 * 60 * 60 + alarmQuarterHour * 1000 * 60 * 15;
+        } else if(currentAnimation == ANIMATION_ALARM) {
+          currentAnimation = ANIMATION_RAINBOW_FADE;
+          digitalWrite(LED_BUILTIN, LOW);
+          SetBrightness(savedBrightness);
+        }
+      } else if(!button0DidSomething) {
+        // Display next Animation
+        NextAnimation();
+      }
+    }
+    
+  }
+  if(button0Pressed && button0PressTime > button0ReleaseTime) {
+    if(millis() - button0PressTime > 1000 && millis() - button0PressTime < 2000 && !button0DidSomething) {
+      button0DidSomething = true;
       // turn strip on/off
       stripOn = !stripOn;
       if(!stripOn) {
@@ -80,14 +120,18 @@ void loop() {
       } else {
         SetBrightness(savedBrightness);
       }
-    } else {
-      // Display next Animation
-      NextAnimation();
+    } else if(millis() - button0PressTime > 2000) {
+      // Start setting alarm
+      SetBrightness(savedBrightness);
+      stripOn = true;
+      currentAnimation = ANIMATION_SET_ALARM_HOUR;
+      blockNextButton0Release = true;
     }
   }
   if(button0Pressed != lastButton0Pressed && button0Pressed) {
+    // Button 0 pressed
     button0PressTime = millis();
-    Serial.println("Button0 pressed");
+    button0DidSomething = false;
   }
   lastButton0Pressed = button0Pressed;
 
@@ -97,32 +141,43 @@ void loop() {
   bool button1Pressed = digitalRead(PIN_BUTTON1) == HIGH;
   if(button1Pressed != lastButton1Pressed && !button1Pressed) {
     button1ReleaseTime = millis();
-    Serial.println("Button1 released");
+    // Button 1 released
+    if(SettingAlarm()) {
+      if(currentAnimation == ANIMATION_SET_ALARM_HOUR) {
+        alarmHour--;
+        if(alarmHour < 0) alarmHour = 0;
+      } else if(currentAnimation == ANIMATION_SET_ALARM_QUARTER_HOUR) {
+        alarmQuarterHour--;
+        if(alarmQuarterHour < 0) alarmQuarterHour = 0;
+      }
+    }
   }
   if(button1Pressed) {
-    if(UseStepInsteadOfColor0()) {
-      // On some animations color can't be controlled. In that case adjust step
-      Serial.println("step");
-      step += (millis() - lastLoop) * colorDirection;
-    } else {
-      Serial.println("hue");
-      hue += (millis() - lastLoop) * 10 * colorDirection;
-      color0 = strip.gamma32(strip.ColorHSV(hue));
+    if(!SettingAlarm()) {
+      if(UseStepInsteadOfColor0()) {
+        // On some animations color can't be controlled. In that case adjust step
+        step += (millis() - lastLoop) * colorDirection;
+      } else {
+        hue += (millis() - lastLoop) * 10 * colorDirection;
+        color0 = strip.gamma32(strip.ColorHSV(hue));
+      }
     }
   }
   if(button1Pressed != lastButton1Pressed && button1Pressed) {
     button1PressTime = millis();
-    Serial.println("Button1 pressed");
-
-    if(lastColorDirectionWasUp) button1ReleaseTime = 0;
-    if(button1PressTime - button1ReleaseTime < 150) {
-      // Set brightness to be changed up
-      colorDirection = -1;
-      lastColorDirectionWasUp = true;
-    } else {
-      // Set brightness to be changed down
-      colorDirection = 1;
-      lastColorDirectionWasUp = false;
+    // Button 1 pressed
+    if(!SettingAlarm()) {
+      // When not setting alarm
+      if(lastColorDirectionWasUp) button1ReleaseTime = 0;
+      if(button1PressTime - button1ReleaseTime < 150) {
+        // Set brightness to be changed up
+        colorDirection = -1;
+        lastColorDirectionWasUp = true;
+      } else {
+        // Set brightness to be changed down
+        colorDirection = 1;
+        lastColorDirectionWasUp = false;
+      }
     }
   }
   lastButton1Pressed = button1Pressed;
@@ -135,35 +190,56 @@ void loop() {
   bool button2Pressed = digitalRead(PIN_BUTTON2) == HIGH;
   if(button2Pressed != lastButton2Pressed && !button2Pressed) {
     button2ReleaseTime = millis();
-    Serial.println("Button2 released");
+    // Button 2 released
+    if(SettingAlarm()) {
+      if(currentAnimation == ANIMATION_SET_ALARM_HOUR) {
+        alarmHour++;
+        if(alarmHour > 24) alarmHour = 24;
+      } else if(currentAnimation == ANIMATION_SET_ALARM_QUARTER_HOUR) {
+        alarmQuarterHour++;
+        if(alarmQuarterHour > 3) alarmQuarterHour = 3;
+      } else if(currentAnimation == ANIMATION_ALARM) {
+        alarmShowRemainingPressTime = millis();
+      }
+    }
   }
   // While pressed do every 50 ms
   if(button2Pressed && millis() - lastBrightnessChange > 10) {
-    SetBrightness(brightness + brightnessDirection);
-    lastBrightnessChange = millis();
+    if(!SettingAlarm()) {
+      SetBrightness(brightness + brightnessDirection);
+      lastBrightnessChange = millis();
+    }
   }
 
   // When button is pressed down
   if(button2Pressed != lastButton2Pressed && button2Pressed) {
     button2PressTime = millis();
-    Serial.println("Button2 pressed");
-
-    // For double tab reset double tab counter after double tab has been registered
-    if(lastBrightnessDirectionWasUp) button2ReleaseTime = 0;
-    if(button2PressTime - button2ReleaseTime < 150) {
-      // Set brightness to be changed up
-      brightnessDirection = .3;
-      lastBrightnessDirectionWasUp = true;
-    } else {
-      // Set brightness to be changed down
-      brightnessDirection = -.8;
-      lastBrightnessDirectionWasUp = false;
+    // Button 2 pressed
+    if(!SettingAlarm()) {
+      // When not sending alarm
+      // For double tab reset double tab counter after double tab has been registered
+      if(lastBrightnessDirectionWasUp) button2ReleaseTime = 0;
+      if(button2PressTime - button2ReleaseTime < 150) {
+        // Set brightness to be changed up
+        brightnessDirection = .3;
+        lastBrightnessDirectionWasUp = true;
+      } else {
+        // Set brightness to be changed down
+        brightnessDirection = -.8;
+        lastBrightnessDirectionWasUp = false;
+      }
     }
+
+    
   }
   lastButton2Pressed = button2Pressed;
 
 
   lastLoop = millis();
+}
+
+bool SettingAlarm() {
+  return currentAnimation == ANIMATION_SET_ALARM_HOUR || currentAnimation == ANIMATION_SET_ALARM_QUARTER_HOUR || currentAnimation == ANIMATION_SET_ALARM_COLOR || currentAnimation == ANIMATION_ALARM;
 }
 
 void SetBrightness(double b) {
@@ -271,7 +347,7 @@ void HandleSerialMsg(char data[]) {
   else if (strcmp(cmd, "ss") == 0) {
     // Set step
     if (arg1 != NULL) {
-      step = strtol(arg1, NULL, 10);
+      step = static_cast<double>(strtol(arg1, NULL, 10));
       Serial.print("Step set to: ");
       Serial.println(step);
     }
@@ -339,7 +415,7 @@ void DoAnimation() {
     RainbowLeftRightBounce();
   } else if(currentAnimation == 2) {
     RainbowLeftRight();
-  } else if(currentAnimation == 3) {
+  } else if(currentAnimation == ANIMATION_RAINBOW_FADE) {
     RainbowFade();
   } else if(currentAnimation == 4) {
     RainbowStatic();
@@ -351,7 +427,66 @@ void DoAnimation() {
     LeftTurnSignal();
   } else if(currentAnimation == 8) {
     RightTurnSignal();
+  } else if(currentAnimation == ANIMATION_SET_ALARM_HOUR) {
+    AlarmSetHour();
+  } else if(currentAnimation == ANIMATION_SET_ALARM_QUARTER_HOUR) {
+    AlarmSetQuarterHour();
+  } else if(currentAnimation == ANIMATION_ALARM) {
+    Alarm();
   }
+}
+
+double EaseInCubic(double t) {
+  return t * t * t;
+}
+
+void Alarm() {
+  if(millis() > alarmTime) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    double deltaTime = static_cast<double>(millis() - alarmTime);
+    if(alarmType == 0) {
+      long b = (long)round(EaseInCubic(deltaTime / alarmLength) * 254) + 1;
+      if(b > 255) b = 255;
+      for(int i = 0; i < strip.numPixels(); i++) {
+        strip.setPixelColor(i, 0xFF922C);
+      }
+      SetBrightness(b);
+    }
+  } else {
+    // not time for alarm, keep everything off
+    if(millis() - alarmSetTime < 4000) {
+      for(int i = 0; i < strip.numPixels(); i++) {
+        strip.setPixelColor(i, 0x00FF11);
+      }
+      // blink animation with sin
+      double deltaTime = static_cast<double>(millis() - alarmSetTime);
+      double b = sin(deltaTime / 2000.0 * PI) * 30.0;
+      if(b < 0) b *= -1;
+      SetBrightness(b);
+    } else if (millis() - alarmShowRemainingPressTime < 4000){
+      double progress = 1.0 - static_cast<double>(millis() - alarmSetTime) / static_cast<double>(alarmTime - alarmSetTime);
+      for(int i = 0; i < strip.numPixels(); i++) {
+        strip.setPixelColor(i, i < progress * strip.numPixels() ? 0x00FF11 : 0x000000);
+      }
+      SetBrightness(20);
+    } else {
+      SetBrightness(0);
+    }
+  }
+}
+
+void AlarmSetHour() {
+  for(int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, i < alarmHour ? 0xFFFF00 : 0x000000);
+  }
+  strip.show();
+}
+
+void AlarmSetQuarterHour() {
+  for(int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, i < alarmQuarterHour ? 0x00FFFF : 0x000000);
+  }
+  strip.show();
 }
 
 bool blinkOn = false;
@@ -409,11 +544,16 @@ void ResetVars() {
 
 }
 
+double GetStepForTime() {
+  return step * (millis() - lastLoop);
+}
+
 void RainbowStatic() {
   for(int i=0; i<strip.numPixels(); i++) { 
     strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
   }
-  hue += step / 4;
+  Serial.println(GetStepForTime());
+  hue += static_cast<long>(GetStepForTime() / 4.0);
   strip.show();
 }
 
@@ -422,7 +562,7 @@ void RainbowFade() {
     int pixelHue = hue + (i * 65536L / strip.numPixels());
     strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
   }
-  hue += step / 4;
+  hue += static_cast<long>(GetStepForTime() / 4.0);
   strip.show();
 }
 
