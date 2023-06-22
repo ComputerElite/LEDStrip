@@ -210,7 +210,7 @@ public class LEDStrip
                 // Update strip info every 2 seconds
                 if(DateTime.Now - lastInfoRequested > TimeSpan.FromSeconds(2))
                 {
-                    UpdateStripInfo();
+                    //UpdateStripInfo();
                     lastInfoRequested = DateTime.Now;
                 }
                 while (msgsToSend.Count > 0)

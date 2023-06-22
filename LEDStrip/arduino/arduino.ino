@@ -51,10 +51,10 @@ double brightness = 255;
 int currentAnimation = 3;
 long color0 = 0xFFFFFF;
 
-bool lastButton0Pressed = true;
-bool lastButton1Pressed = true;
-bool lastButton2Pressed = true;
-bool lastButton3Pressed = true;
+bool lastButton0Pressed = false;
+bool lastButton1Pressed = false;
+bool lastButton2Pressed = false;
+bool lastButton3Pressed = false;
 long button0PressTime = 0;
 long button1PressTime = 0;
 long button2PressTime = 0;
@@ -246,7 +246,6 @@ void ReadTurnSignalButtons() {
 }
 
 void ReadNormalButtons() {
-
   // Button 0
   // Press: Next Animation or turn LED Strip on if off
   // Hold >1s: Turn off/on LED strip
@@ -592,6 +591,7 @@ bool UseStepInsteadOfColor0() {
 }
 
 void DoAnimation() {
+  digitalWrite(PIN_LED05V, LOW);
   if(currentAnimation == 0) {
     RainbowLeftRightBounceMiddle();
   } else if(currentAnimation == 1) {
@@ -702,7 +702,6 @@ void RainbowStatic() {
   for(int i=0; i<strip.numPixels(); i++) { 
     strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
   }
-  Serial.println(GetStepForTime());
   hue += static_cast<long>(GetStepForTime() / 4.0);
   strip.show();
 }
