@@ -50,6 +50,8 @@ long button3ReleaseTime = 0;
 bool leftSignalOn = false;
 bool rightSignalOn = false;
 
+uint32_t blinkColor = 0xFF6600;
+
 bool blinkOn = false;
 long blinkDelay = 300;
 
@@ -182,7 +184,7 @@ void LeftTurnSignal() {
     if(!leftSignalOn) return;
     for(int i=0; i<strip.numPixels(); i++) { 
         if(i < 20 && blinkOn) {
-            strip.setPixelColor(i, 0xFFFF00);
+            strip.setPixelColor(i, blinkColor);
         }
     }
 }
@@ -191,7 +193,7 @@ void RightTurnSignal() {
     if(!rightSignalOn) return;
     for(int i=0; i<strip.numPixels(); i++) { 
         if(i >= 40 && blinkOn) {
-            strip.setPixelColor(i, 0xFFFF00);
+            strip.setPixelColor(i, blinkColor);
         }
     }
 }

@@ -16,6 +16,8 @@
 #define PIN_BUTTON1 3
 #define PIN_BUTTON2 4
 #define PIN_BUTTON3 5
+#define PIN_LED05V 7
+#define PIN_LED0GND 8
 #define N_LEDS 60
 #define ANIMATION_RAINBOW_FADE 3
 #define ANIMATION_SET_ALARM_HOUR 100
@@ -32,6 +34,10 @@ void setup() {
   pinMode(PIN_BUTTON0, INPUT);
   pinMode(PIN_BUTTON1, INPUT);
   pinMode(PIN_BUTTON2, INPUT);
+  pinMode(PIN_BUTTON3, INPUT);
+  pinMode(PIN_LED0GND, OUTPUT);
+  digitalWrite(PIN_LED0GND, LOW);
+  pinMode(PIN_LED05V, OUTPUT);
   Serial.begin(9600);
 }
 char message[MAX_MESSAGE_LENGTH];
@@ -48,12 +54,15 @@ long color0 = 0xFFFFFF;
 bool lastButton0Pressed = true;
 bool lastButton1Pressed = true;
 bool lastButton2Pressed = true;
+bool lastButton3Pressed = true;
 long button0PressTime = 0;
 long button1PressTime = 0;
 long button2PressTime = 0;
+long button3PressTime = 0;
 long button0ReleaseTime = 0;
 long button1ReleaseTime = 0;
 long button2ReleaseTime = 0;
+long button3ReleaseTime = 0;
 
 long alarmHour = 8;
 long alarmQuarterHour = 0;
@@ -76,10 +85,167 @@ int savedBrightness = 0;
 
 bool blockNextButton0Release = false;
 
+// Turn signal
+bool leftSignalOn = false;
+bool rightSignalOn = false;
+
+uint32_t blinkColor = 0xFF6600;
+
+bool blinkOn = false;
+long blinkDelay = 300;
+
+bool useTurnSignal = false;
+
+u32 lastBlink = 0;
+
 void loop() {
   // Read from serial
   ReadFromSerial();
-  DoAnimation();
+  if(useTurnSignal) {
+    ReadTurnSignalButtons();
+    DoTurnSignalAnimation();
+  } else {
+    DoAnimation();
+    ReadNormalButtons();
+  }
+}
+
+void DoTurnSignalAnimation() {
+    UpdateBlink();
+    ClearAll();
+    AddBrakeLight();
+    LeftTurnSignal();
+    RightTurnSignal();
+    // Enable LED if any turn signal is on
+    digitalWrite(PIN_LED05V, leftSignalOn || rightSignalOn ? HIGH : LOW);
+
+
+    strip.show();
+}
+
+void AddBrakeLight() {
+    // Brake light
+    for(int i=strip.numPixels()/2 -4; i<strip.numPixels()/2+4; i++) { 
+        strip.setPixelColor(i, 0xFF0000);
+    }
+}
+
+void ClearAll() {
+    for(int i=0; i<strip.numPixels(); i++) { 
+        strip.setPixelColor(i, 0x000000);
+    }
+}
+
+void UpdateBlink() {
+    if(millis() - lastBlink > blinkDelay) {
+        lastBlink = millis();
+        blinkOn = !blinkOn;
+    }
+}
+
+void LeftTurnSignal() {
+    if(!leftSignalOn) return;
+    for(int i=0; i<strip.numPixels(); i++) { 
+        if(i < 20 && blinkOn) {
+            strip.setPixelColor(i, blinkColor);
+        }
+    }
+}
+
+void RightTurnSignal() {
+    if(!rightSignalOn) return;
+    for(int i=0; i<strip.numPixels(); i++) { 
+        if(i >= 40 && blinkOn) {
+            strip.setPixelColor(i, blinkColor);
+        }
+    }
+}
+
+void ReadTurnSignalButtons() {
+  if(millis() < 1000) return; // ignore first second
+  // Button 0
+  bool button0Pressed = digitalRead(PIN_BUTTON0) == HIGH;
+  if(button0Pressed != lastButton0Pressed && !button0Pressed) {
+    button0ReleaseTime = millis();
+    useTurnSignal = false;
+  }
+  if(button0Pressed != lastButton0Pressed && button0Pressed) {
+    // Button 0 pressed
+    button0PressTime = millis();
+  }
+  lastButton0Pressed = button0Pressed;
+
+
+
+  // Button 1
+  // Danger light
+  bool button1Pressed = digitalRead(PIN_BUTTON1) == HIGH;
+  if(button1Pressed != lastButton1Pressed && !button1Pressed) {
+    // Button 1 released
+    button1ReleaseTime = millis();
+    bool setTo = true;
+    if(leftSignalOn && rightSignalOn) setTo = false;
+    leftSignalOn = setTo;
+    rightSignalOn = setTo;
+    blinkOn = false;
+    lastBlink = 0;
+  }
+  if(button1Pressed != lastButton1Pressed && button1Pressed) {
+    button1PressTime = millis();
+    // Button 1 pressed
+    
+  }
+  lastButton1Pressed = button1Pressed;
+
+
+
+  // Button 2
+  // Left Turn
+  bool button2Pressed = digitalRead(PIN_BUTTON2) == HIGH;
+  if(button2Pressed != lastButton2Pressed && !button2Pressed) {
+    button2ReleaseTime = millis();
+    // Button 2 released
+    leftSignalOn = !leftSignalOn;
+    rightSignalOn = false;
+    blinkOn = false;
+    lastBlink = 0;
+  }
+
+  // When button is pressed down
+  if(button2Pressed != lastButton2Pressed && button2Pressed) {
+    button2PressTime = millis();
+    // Button 2 pressed
+    
+  }
+  lastButton2Pressed = button2Pressed;
+
+
+
+  // Button 3
+  // Right Turn
+  bool button3Pressed = digitalRead(PIN_BUTTON3) == HIGH;
+  if(button3Pressed != lastButton3Pressed && !button3Pressed) {
+    button3ReleaseTime = millis();
+    // Button 3 released
+    rightSignalOn = !rightSignalOn;
+    leftSignalOn = false;
+    blinkOn = false;
+    lastBlink = 0;
+  }
+
+  // When button is pressed down
+  if(button3Pressed != lastButton3Pressed && button3Pressed) {
+    button3PressTime = millis();
+    // Button 3 pressed
+    
+  }
+  lastButton3Pressed = button3Pressed;
+
+
+  lastLoop = millis();
+}
+
+void ReadNormalButtons() {
 
   // Button 0
   // Press: Next Animation or turn LED Strip on if off
@@ -235,6 +401,22 @@ void loop() {
   }
   lastButton2Pressed = button2Pressed;
 
+
+// Button 3
+  // Right Turn
+  bool button3Pressed = digitalRead(PIN_BUTTON3) == HIGH;
+  if(button3Pressed != lastButton3Pressed && !button3Pressed) {
+    button3ReleaseTime = millis();
+    useTurnSignal = true;
+  }
+
+  // When button is pressed down
+  if(button3Pressed != lastButton3Pressed && button3Pressed) {
+    button3PressTime = millis();
+    // Button 3 pressed
+    
+  }
+  lastButton3Pressed = button3Pressed;
 
   lastLoop = millis();
 }
@@ -490,8 +672,6 @@ void AlarmSetQuarterHour() {
   strip.show();
 }
 
-bool blinkOn = false;
-
 void Static() {
   for(int i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, color0);
@@ -499,43 +679,12 @@ void Static() {
   strip.show();
 }
 
-u32 lastBlink = 0;
 void Blink() {
   if(millis() - lastBlink > msDelay) {
     lastBlink = millis();
     blinkOn = !blinkOn;
     for(int i=0; i<strip.numPixels(); i++) { 
       strip.setPixelColor(i, blinkOn ? color0 : 0x000000);
-    }
-    strip.show();
-  }
-}
-
-void LeftTurnSignal() {
-  if(millis() - lastBlink > msDelay) {
-    lastBlink = millis();
-    blinkOn = !blinkOn;
-    for(int i=0; i<strip.numPixels(); i++) { 
-      if(i < 10) {
-        strip.setPixelColor(i, blinkOn ? 0xFFFF00 : 0x000000);
-      } else {
-        strip.setPixelColor(i, 0x000000);
-      }
-    }
-    strip.show();
-  }
-}
-
-void RightTurnSignal() {
-  if(millis() - lastBlink > msDelay) {
-    lastBlink = millis();
-    blinkOn = !blinkOn;
-    for(int i=0; i<strip.numPixels(); i++) { 
-      if(i > 20) {
-        strip.setPixelColor(i, blinkOn ? 0xFFFF00 : 0x000000);
-      } else {
-        strip.setPixelColor(i, 0x000000);
-      }
     }
     strip.show();
   }
