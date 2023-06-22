@@ -11,11 +11,12 @@
 
 #include <Adafruit_NeoPixel.h>
 
-#define PIN 5
-#define PIN_BUTTON0 4
+#define PIN 6
+#define PIN_BUTTON0 2
 #define PIN_BUTTON1 3
-#define PIN_BUTTON2 2
-#define N_LEDS 30
+#define PIN_BUTTON2 4
+#define PIN_BUTTON3 5
+#define N_LEDS 60
 #define ANIMATION_RAINBOW_FADE 3
 #define ANIMATION_SET_ALARM_HOUR 100
 #define ANIMATION_SET_ALARM_QUARTER_HOUR 101
