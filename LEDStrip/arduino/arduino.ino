@@ -146,7 +146,7 @@ void UpdateBlink() {
 void LeftTurnSignal() {
     if(!leftSignalOn) return;
     for(int i=0; i<strip.numPixels(); i++) { 
-        if(i < 30 && blinkOn) {
+        if((i < 30 && i >= 24 || i < 7) && blinkOn) {
             strip.setPixelColor(i, blinkColor);
         }
     }
@@ -155,7 +155,7 @@ void LeftTurnSignal() {
 void RightTurnSignal() {
     if(!rightSignalOn) return;
     for(int i=0; i<strip.numPixels(); i++) { 
-        if(i >= 30 && blinkOn) {
+        if((i >= 30 && i <= 35 || i >= 53) && blinkOn) {
             strip.setPixelColor(i, blinkColor);
         }
     }
